@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Market Intel — Settings</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+</head>
+<body>
+<div id="sidebar"></div>
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Settings</div>
+    <div class="topbar-right">
+      <span class="tb-date" id="tb-date"></span>
+      <span class="system-badge">Market Intel</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header">
+      <div class="sec-label">Market Intel Configuration</div>
+      <h2>App Settings</h2>
+      <div class="gold-bar"></div>
+    </div>
+
+    <div class="form-section">
+      <h3>Segment Configuration</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">The five active farm pockets per CLAUDE.md §1 and §4.4. These are fixed to match Karolis's geographic focus. Contact details to add or remove segments.</p>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>Segment</th><th>City</th><th>Type</th><th>Postal Codes</th><th>Status</th></tr></thead>
+          <tbody id="seg-table"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Analysis Thresholds</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Noteworthy Move Threshold (%)</label>
+          <input class="form-input" id="s-threshold" type="number" min="1" max="25" placeholder="5">
+          <div class="form-hint">Movements above this % are flagged as noteworthy. Default: 5%</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Small Sample Threshold (transactions)</label>
+          <input class="form-input" id="s-sample" type="number" min="1" max="50" placeholder="10">
+          <div class="form-hint">Weeks with fewer than this many sales get the small-sample warning. Default: 10</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Buyer's Market SP/LP Threshold (%)</label>
+          <input class="form-input" id="s-buyer-splp" type="number" step="0.1" placeholder="97.5">
+          <div class="form-hint">SP/LP below this value triggers "Buyer's Market" verdict. Default: 97.5%</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Below-Ask Threshold for Buyer's Market (%)</label>
+          <input class="form-input" id="s-buyer-below" type="number" step="0.1" placeholder="75">
+          <div class="form-hint">% below list above this value confirms buyer's market. Default: 75%</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Voice Profile Reference</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:12px">Karolis's voice per CLAUDE.md §9. The AI analysis engine uses these rules when generating narrative blocks.</p>
+      <div style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:16px 20px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <div style="font-size:10px;letter-spacing:2px;color:var(--green);text-transform:uppercase;margin-bottom:10px;font-weight:700">✓ Approved Voice</div>
+            ${[
+              'Confident, brief, insider — Sotheby\'s-grade',
+              'References specific percentages and data points',
+              'Names the problem directly: "87.3% sold below ask"',
+              'Clear business implication per insight',
+              'No price predictions — data only',
+              'Acknowledges uncertainty where it exists',
+            ].map(s => `<div style="font-size:12px;color:#888;padding:4px 0;border-bottom:1px solid var(--border)">✓ ${s}</div>`).join('')}
+          </div>
+          <div>
+            <div style="font-size:10px;letter-spacing:2px;color:var(--red);text-transform:uppercase;margin-bottom:10px;font-weight:700">✗ Banned Language</div>
+            ${[
+              '"Hope you\'re well!"',
+              '"The market is heating up/cooling down"',
+              '"Prices are expected to rise/fall"',
+              '"Game-changing", "synergy", "ecosystem"',
+              '"Low-key", "passion", "hustle"',
+              'Any fabricated stats or relationships',
+            ].map(s => `<div style="font-size:12px;color:#555;padding:4px 0;border-bottom:1px solid var(--border)">✗ ${s}</div>`).join('')}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:10px;align-items:center;margin-top:8px">
+      <button class="btn btn-gold" onclick="saveSettings()">Save Settings</button>
+      <span id="save-conf" style="font-size:12px;color:var(--green);display:none">Saved ✓</span>
+    </div>
+  </div>
+  <footer class="page-footer">
+    <span>Settings saved to localStorage · §3 compliance always on · §14 AI drafts only</span>
+    <span>TRREB Stratus · CASL s.6(5) · RECO Rule 7</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+buildMISidebar('settings-mi');
+setDate(document.getElementById('tb-date'));
+
+// Segment table
+document.getElementById('seg-table').innerHTML = MI_SEGMENTS.map(seg => `
+  <tr>
+    <td class="td-main">${seg.name}</td>
+    <td style="color:var(--muted)">${seg.city}</td>
+    <td>${seg.type}</td>
+    <td style="font-size:11px;color:var(--muted2)">${seg.postalCodes}</td>
+    <td><span class="badge badge-green">Active</span></td>
+  </tr>`).join('');
+
+// Load settings
+const s = getMISettings();
+document.getElementById('s-threshold').value   = s.noteworthy_threshold || 5;
+document.getElementById('s-sample').value      = s.small_sample_threshold || 10;
+document.getElementById('s-buyer-splp').value  = s.buyer_market_splp_threshold || 97.5;
+document.getElementById('s-buyer-below').value = s.buyer_market_below_threshold || 75;
+
+function saveSettings() {
+  const updated = {
+    noteworthy_threshold:        parseFloat(document.getElementById('s-threshold').value) || 5,
+    small_sample_threshold:      parseInt(document.getElementById('s-sample').value) || 10,
+    buyer_market_splp_threshold: parseFloat(document.getElementById('s-buyer-splp').value) || 97.5,
+    buyer_market_below_threshold:parseFloat(document.getElementById('s-buyer-below').value) || 75,
+    segments_active:             MI_SEGMENTS.map(s => s.id),
+    voice_style:                 'karolis',
+  };
+  localStorage.setItem('mi_settings', JSON.stringify(updated));
+  const conf = document.getElementById('save-conf');
+  conf.style.display = 'inline';
+  setTimeout(() => conf.style.display = 'none', 2500);
+}
+</script>
+</body>
+</html>

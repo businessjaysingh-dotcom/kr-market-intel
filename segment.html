@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Market Intel — Segment Detail</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.seg-switcher { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+.seg-btn { padding: 6px 14px; border-radius: 100px; font-size: 11px; font-weight: 600; border: 1px solid var(--border2); background: var(--card2); color: var(--muted); cursor: pointer; text-decoration: none; transition: all .15s; }
+.seg-btn:hover { color: #bbb; border-color: #3a3a3a; }
+.seg-btn.active { background: var(--gold-dim); border-color: var(--gold-border); color: var(--gold2); }
+.seg-btn.no-data { opacity: 0.4; cursor: default; }
+.detail-header { margin-bottom: 20px; }
+.detail-header h2 { font-family: 'Playfair Display', serif; font-size: 28px; font-weight: 700; color: #fff; }
+.detail-header-meta { display: flex; gap: 12px; align-items: center; margin-top: 6px; flex-wrap: wrap; }
+.verdict-pill {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 100px;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.verdict-buyer { background: rgba(249,115,22,.1); border: 1px solid rgba(249,115,22,.3); color: #fb923c; }
+.verdict-seller { background: var(--green-dim); border: 1px solid rgba(34,197,94,.3); color: #4ade80; }
+.full-kpi-table {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  overflow: hidden;
+  margin-bottom: 24px;
+}
+.full-kpi-table table { width: 100%; }
+.full-kpi-table thead th { background: var(--card2); }
+.full-kpi-table th:first-child { width: 200px; }
+</style>
+</head>
+<body>
+<div id="sidebar"></div>
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Segment Detail</div>
+    <div class="topbar-right">
+      <span class="tb-date" id="tb-date"></span>
+      <span class="week-badge" id="week-label">—</span>
+      <span class="system-badge">Market Intel</span>
+    </div>
+  </div>
+  <div class="content">
+    <div id="seg-switcher-area"></div>
+    <div id="seg-content">
+      <div class="empty-state">
+        <div class="empty-state-icon">◉</div>
+        <div class="empty-state-title">Select a segment above</div>
+        <div class="empty-state-sub">Or click a tile on <a href="index.html" style="color:var(--gold)">This Week</a></div>
+      </div>
+    </div>
+  </div>
+  <footer class="page-footer">
+    <span>Source: TRREB MLS · Stratus data — for internal use only · Not for distribution</span>
+    <span>Small sample flag: shown when transactions &lt; 10 — not statistically meaningful</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="shared.js"></script>
+<script>
+buildMISidebar('segment');
+setDate(document.getElementById('tb-date'));
+
+const week = getLatestWeek();
+if (week) document.getElementById('week-label').textContent = week.period_label;
+
+// Segment switcher
+document.getElementById('seg-switcher-area').innerHTML = `
+  <div class="seg-switcher">${MI_SEGMENTS.map(seg => {
+    const hasData = week && getSegmentData(week, seg.id) != null;
+    return `<a href="segment.html?id=${seg.id}" class="seg-btn${hasData?'':' no-data'}" ${!hasData?'title="No data this period"':''}>
+      ${seg.name}${!hasData?' <span style="font-size:9px;opacity:.5">(no data)</span>':''}
+    </a>`;
+  }).join('')}</div>`;
+
+// Mark active
+const activeId = getURLParam('id') || '';
+document.querySelectorAll('.seg-btn').forEach(btn => {
+  if (btn.href && btn.href.includes(`id=${activeId}`)) btn.classList.add('active');
+});
+
+function renderSegment(segId) {
+  const segMeta = MI_SEGMENTS.find(s => s.id === segId);
+  const segData  = week ? getSegmentData(week, segId) : null;
+  const el = document.getElementById('seg-content');
+
+  if (!segMeta) { el.innerHTML = `<div class="empty-state"><div class="empty-state-title">Unknown segment</div></div>`; return; }
+  if (!segData)  {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">◉</div>
+      <div class="empty-state-title">No data for ${segMeta.name} this period</div>
+      <div class="empty-state-sub">Add data on the <a href="input.html" style="color:var(--gold)">Data Input</a> page to populate this view.</div>
+    </div>`;
+    return;
+  }
+
+  const sel   = segData.selected;
+  const prior  = segData.prior;
+  const sply   = segData.same_period_last_year;
+  const buyerMarket = sel.avg_splp < 97.5 && sel.pct_below_list > 75;
+  const narrative   = generateNarrative(segData);
+
+  el.innerHTML = `
+    ${segData.sample_size_flag ? `<div class="sample-flag">⚠ Small sample — fewer than 10 transactions. Data shown but not statistically meaningful.</div>` : ''}
+
+    <div class="detail-header">
+      <h2>${segMeta.name}</h2>
+      <div class="detail-header-meta">
+        <span style="font-size:12px;color:var(--muted)">${segMeta.city} · ${segMeta.type} · ${segMeta.postalCodes}</span>
+        <span class="verdict-pill ${buyerMarket ? 'verdict-buyer' : 'verdict-seller'}">${buyerMarket ? "Buyer's Market" : "Seller's Market"}</span>
+        ${sel.terminations > 100 ? `<span class="badge badge-orange">${sel.terminations} terminations — call list</span>` : ''}
+      </div>
+    </div>
+
+    <!-- FULL KPI STRIP -->
+    ${kpiStripHTML(segData)}
+
+    <!-- EXTENDED KPI TABLE -->
+    <div class="full-kpi-table">
+      <table>
+        <thead><tr>
+          <th>Metric</th>
+          <th>${week?.period_label || 'Selected'}</th>
+          <th>${prior ? 'Prior Period' : '—'}</th>
+          <th>${sply ? 'Same Period LY' : '—'}</th>
+          <th>MoM Δ</th>
+          <th>YoY Δ</th>
+        </tr></thead>
+        <tbody>
+          ${MI_KPIS.map(kpi => {
+            const val  = sel[kpi.key];
+            const pval = prior?.[kpi.key];
+            const yval = sply?.[kpi.key];
+            const mom  = computeDelta(val, pval);
+            const yoy  = computeDelta(val, yval);
+            return `<tr>
+              <td class="td-main">${kpi.label}</td>
+              <td style="font-weight:600;color:#fff">${fmtVal(val, kpi.format)}</td>
+              <td style="color:var(--muted)">${fmtVal(pval, kpi.format)}</td>
+              <td style="color:var(--muted)">${fmtVal(yval, kpi.format)}</td>
+              <td>${mom != null ? `<span class="delta-chip ${deltaClass(mom, kpi.higherIsBetter)}">${deltaArrow(mom)} ${fmtDelta(mom)}</span>` : '—'}</td>
+              <td>${yoy != null ? `<span class="delta-chip ${deltaClass(yoy, kpi.higherIsBetter)}">${deltaArrow(yoy)} ${fmtDelta(yoy)}</span>` : '—'}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-title">Transaction Volume — 12-Month Trend</div>
+        <div class="chart-card-sub">Oakville Detached · Monthly sales</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-vol"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Average Price — 12-Month Trend</div>
+        <div class="chart-card-sub">CAD · Monthly average</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-price"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-grid-2">
+      <div class="chart-card">
+        <div class="chart-card-title">Days on Market — Trend</div>
+        <div class="chart-card-sub">Average DOM per month</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-dom"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Supply vs Demand</div>
+        <div class="chart-card-sub">New listings vs. sales volume</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-svd"></canvas></div>
+      </div>
+    </div>
+
+    <!-- NARRATIVE -->
+    <div class="narrative-section">
+      <div class="sec-label">AI Analysis · ${week?.period_label || ''} · Karolis Voice (§9)</div>
+      <div class="narrative-headline">${narrative.headline}</div>
+
+      <div class="narrative-block">
+        <div class="narrative-block-label">Executive Summary</div>
+        <p>${narrative.execSummary}</p>
+      </div>
+      <div class="narrative-block">
+        <div class="narrative-block-label">Price Dynamics</div>
+        <p>${narrative.priceAnalysis}</p>
+      </div>
+      <div class="narrative-block">
+        <div class="narrative-block-label">Volume &amp; Supply</div>
+        <p>${narrative.volumeAnalysis}</p>
+      </div>
+      <div class="narrative-block">
+        <div class="narrative-block-label">Buyer / Seller Dynamics</div>
+        <p>${narrative.dynamicsAnalysis}</p>
+      </div>
+      <div class="outlook-block">
+        <div class="outlook-block-label">30-Day Outlook</div>
+        <p>${narrative.outlook}</p>
+      </div>
+    </div>`;
+
+  // Build charts using trend data
+  buildCharts(segId);
+}
+
+function buildCharts(segId) {
+  const trend = segId === 'oakville-detached' ? MI_TREND_OAKVILLE : null;
+  const labels = trend ? trend.map(t => t.period) : (week ? [week.period_label] : []);
+
+  function makeDataset(key, trend, segData) {
+    if (trend) return trend.map(t => t[key]);
+    const segD = week ? getSegmentData(week, segId) : null;
+    return segD ? [segD.selected[key]] : [];
+  }
+
+  const baseOpts = buildChartOptions({});
+
+  // Volume
+  const volCtx = document.getElementById('chart-vol');
+  if (volCtx) {
+    new Chart(volCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [{
+          data: makeDataset('transactions', trend, null),
+          backgroundColor: 'rgba(34,197,94,.5)',
+          borderColor: '#22c55e',
+          borderWidth: 1,
+          borderRadius: 3,
+        }]
+      },
+      options: buildChartOptions({ scales: { y: { ticks: { callback: v => v } } } })
+    });
+  }
+
+  // Price
+  const priceCtx = document.getElementById('chart-price');
+  if (priceCtx) {
+    new Chart(priceCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: makeDataset('avg_price', trend, null),
+          borderColor: '#C9A84C',
+          backgroundColor: 'rgba(201,168,76,.08)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointBackgroundColor: '#C9A84C',
+          pointRadius: 3,
+        }]
+      },
+      options: buildChartOptions({ scales: { y: { ticks: { callback: v => '$' + (v/1e6).toFixed(2) + 'M' } } } })
+    });
+  }
+
+  // DOM
+  const domCtx = document.getElementById('chart-dom');
+  if (domCtx) {
+    new Chart(domCtx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          data: makeDataset('avg_dom', trend, null),
+          borderColor: '#f97316',
+          backgroundColor: 'rgba(249,115,22,.08)',
+          fill: true,
+          tension: 0.4,
+          borderWidth: 2,
+          pointBackgroundColor: '#f97316',
+          pointRadius: 3,
+        }]
+      },
+      options: buildChartOptions({ scales: { y: { ticks: { callback: v => v + 'd' } } } })
+    });
+  }
+
+  // Supply vs Demand
+  const svdCtx = document.getElementById('chart-svd');
+  if (svdCtx) {
+    new Chart(svdCtx, {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'New Listings',
+            data: makeDataset('new_listings', trend, null),
+            backgroundColor: 'rgba(59,130,246,.4)',
+            borderColor: '#3b82f6',
+            borderWidth: 1,
+            borderRadius: 2,
+          },
+          {
+            label: 'Sales',
+            data: makeDataset('transactions', trend, null),
+            backgroundColor: 'rgba(34,197,94,.4)',
+            borderColor: '#22c55e',
+            borderWidth: 1,
+            borderRadius: 2,
+          }
+        ]
+      },
+      options: buildChartOptions({
+        plugins: { legend: { display: true, labels: { color: '#555', font: { size: 10 }, boxWidth: 10 } } },
+        scales: { x: { stacked: false }, y: { stacked: false } }
+      })
+    });
+  }
+}
+
+// Initial render
+const initId = getURLParam('id') || (week ? Object.keys(week.segments).find(k => week.segments[k]) : null);
+if (initId) renderSegment(initId);
+</script>
+</body>
+</html>

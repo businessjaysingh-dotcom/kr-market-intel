@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Market Intel — Newsletter Helper</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.copy-all-bar { display: flex; gap: 10px; align-items: center; padding: 12px 16px; background: var(--card2); border: 1px solid var(--border); border-radius: 8px; margin-bottom: 20px; }
+.copy-all-bar p { font-size: 12px; color: var(--muted); flex: 1; line-height: 1.5; }
+.seg-divider { height: 1px; background: var(--border); margin: 32px 0; }
+</style>
+</head>
+<body>
+<div id="sidebar"></div>
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Newsletter Helper</div>
+    <div class="topbar-right">
+      <span class="tb-date" id="tb-date"></span>
+      <span class="week-badge" id="week-label">—</span>
+      <span class="system-badge">Market Intel</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header">
+      <div class="sec-label">§4.8 Content · Copy-paste into newsletter draft</div>
+      <h2>Newsletter Export</h2>
+      <div class="gold-bar"></div>
+      <p>Copy-paste-ready analysis blocks for each segment. Karolis reviews, edits to his exact voice, then pastes into his newsletter. AI drafts only — he writes the final version. §14.</p>
+    </div>
+
+    <div class="copy-all-bar">
+      <p>Each block below is independently copyable. Start with the <strong style="color:#bbb">Headline</strong>, drop in the <strong style="color:#bbb">Executive Summary</strong>, then add whichever KPI bullets and analysis paragraphs fit the week's narrative. You write the newsletter — this removes the blank-page problem.</p>
+      <button class="btn btn-gold" onclick="copyAll()">Copy All Segments</button>
+    </div>
+
+    <div id="newsletter-content"></div>
+  </div>
+  <footer class="page-footer">
+    <span>§14: AI drafts only — Karolis reviews and edits before sending. Not for direct distribution.</span>
+    <span>TRREB Stratus data · Accuracy as of data entry date · No price predictions</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+buildMISidebar('newsletter');
+setDate(document.getElementById('tb-date'));
+
+const week = getLatestWeek();
+if (week) document.getElementById('week-label').textContent = week.period_label;
+
+function buildKPIBullets(segData) {
+  const sel = segData.selected;
+  const prior = segData.prior;
+  const sply = segData.same_period_last_year;
+  const bullets = [];
+  const momPrice = computeDelta(sel.avg_price, prior?.avg_price);
+  const yoyPrice = computeDelta(sel.avg_price, sply?.avg_price);
+  const momVol   = computeDelta(sel.transactions, prior?.transactions);
+  const momTerm  = computeDelta(sel.terminations, prior?.terminations);
+
+  bullets.push(`• Average sale price: ${fmtCurrency(sel.avg_price)}${momPrice != null ? ` (${momPrice >= 0 ? '+' : ''}${momPrice.toFixed(1)}% MoM${yoyPrice != null ? `, ${yoyPrice >= 0 ? '+' : ''}${yoyPrice.toFixed(1)}% YoY` : ''})` : ''}`);
+  bullets.push(`• Median sale price: ${fmtCurrency(sel.median_price)}`);
+  bullets.push(`• ${fmtNum(sel.transactions)} sales closed${momVol != null ? ` — ${momVol >= 0 ? 'up' : 'down'} ${Math.abs(momVol).toFixed(1)}% from prior period` : ''}`);
+  bullets.push(`• ${fmtNum(sel.new_listings)} new listings entered the market`);
+  bullets.push(`• ${fmtNum(sel.terminations)} listings terminated${momTerm != null ? ` (${momTerm >= 0 ? '+' : ''}${momTerm.toFixed(1)}% MoM)` : ''}`);
+  bullets.push(`• Average SP/LP: ${fmtPct(sel.avg_splp)} — ${fmtPct(sel.pct_below_list)} of homes sold below asking`);
+  bullets.push(`• Average days on market: ${fmtNum(sel.avg_dom)} days`);
+  return bullets.join('\n');
+}
+
+function renderNewsletter() {
+  const el = document.getElementById('newsletter-content');
+  const segsWithData = MI_SEGMENTS.filter(seg => week && getSegmentData(week, seg.id) != null);
+
+  if (segsWithData.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">✉</div>
+      <div class="empty-state-title">No market data loaded</div>
+      <div class="empty-state-sub">Add data via <a href="input.html" style="color:var(--gold)">Data Input</a> to generate newsletter copy.</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = segsWithData.map((seg, idx) => {
+    const segData  = getSegmentData(week, seg.id);
+    const narrative = generateNarrative(segData);
+    const kpiBullets = buildKPIBullets(segData);
+
+    return `<div class="newsletter-segment" id="nseg-${seg.id}">
+      <div class="newsletter-seg-header">
+        <div class="newsletter-seg-title">${seg.name} — ${week?.period_label || ''}</div>
+        <button class="btn btn-sm" onclick="copySegment('${seg.id}')">Copy All</button>
+      </div>
+
+      <!-- Headline -->
+      <div class="copy-block">
+        <div class="copy-block-label">
+          Headline
+          <button class="copy-btn" onclick="copyBlock(this, 'headline-${seg.id}')">Copy</button>
+        </div>
+        <div class="copy-area" id="headline-${seg.id}">${narrative.headline}</div>
+      </div>
+
+      <!-- Executive Summary -->
+      <div class="copy-block">
+        <div class="copy-block-label">
+          Executive Summary
+          <button class="copy-btn" onclick="copyBlock(this, 'exec-${seg.id}')">Copy</button>
+        </div>
+        <div class="copy-area" id="exec-${seg.id}">${narrative.execSummary}</div>
+      </div>
+
+      <!-- KPI Bullets -->
+      <div class="copy-block">
+        <div class="copy-block-label">
+          KPI Bullets
+          <button class="copy-btn" onclick="copyBlock(this, 'kpi-${seg.id}')">Copy</button>
+        </div>
+        <div class="copy-area" id="kpi-${seg.id}">${kpiBullets}</div>
+      </div>
+
+      <!-- Analysis -->
+      <div class="copy-block">
+        <div class="copy-block-label">
+          Price Analysis
+          <button class="copy-btn" onclick="copyBlock(this, 'price-${seg.id}')">Copy</button>
+        </div>
+        <div class="copy-area" id="price-${seg.id}">${narrative.priceAnalysis}</div>
+      </div>
+      <div class="copy-block">
+        <div class="copy-block-label">
+          Volume &amp; Supply
+          <button class="copy-btn" onclick="copyBlock(this, 'vol-${seg.id}')">Copy</button>
+        </div>
+        <div class="copy-area" id="vol-${seg.id}">${narrative.volumeAnalysis}</div>
+      </div>
+      <div class="copy-block">
+        <div class="copy-block-label">
+          Buyer / Seller Dynamics
+          <button class="copy-btn" onclick="copyBlock(this, 'dyn-${seg.id}')">Copy</button>
+        </div>
+        <div class="copy-area" id="dyn-${seg.id}">${narrative.dynamicsAnalysis}</div>
+      </div>
+
+      <!-- Outlook -->
+      <div class="copy-block">
+        <div class="copy-block-label">
+          30-Day Outlook
+          <button class="copy-btn" onclick="copyBlock(this, 'outlook-${seg.id}')">Copy</button>
+        </div>
+        <div class="copy-area" id="outlook-${seg.id}">${narrative.outlook}</div>
+      </div>
+
+      ${idx < segsWithData.length - 1 ? '<div class="seg-divider"></div>' : ''}
+    </div>`;
+  }).join('');
+}
+
+function copyBlock(btn, id) {
+  const el = document.getElementById(id);
+  if (el) copyText(el.textContent, btn);
+}
+
+function copySegment(segId) {
+  const segData   = week ? getSegmentData(week, segId) : null;
+  if (!segData) return;
+  const narrative  = generateNarrative(segData);
+  const seg        = MI_SEGMENTS.find(s => s.id === segId);
+  const kpiBullets = buildKPIBullets(segData);
+
+  const full = [
+    `${seg.name} — ${week?.period_label || ''}`,
+    '',
+    narrative.headline,
+    '',
+    narrative.execSummary,
+    '',
+    kpiBullets,
+    '',
+    narrative.priceAnalysis,
+    '',
+    narrative.volumeAnalysis,
+    '',
+    narrative.dynamicsAnalysis,
+    '',
+    '30-Day Outlook:',
+    narrative.outlook,
+  ].join('\n');
+
+  navigator.clipboard.writeText(full).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'Copied ✓';
+    setTimeout(() => btn.textContent = orig, 2000);
+  });
+}
+
+function copyAll() {
+  const segsWithData = MI_SEGMENTS.filter(seg => week && getSegmentData(week, seg.id) != null);
+  const full = segsWithData.map(seg => {
+    const segData   = getSegmentData(week, seg.id);
+    const narrative  = generateNarrative(segData);
+    const kpiBullets = buildKPIBullets(segData);
+    return [
+      `═══ ${seg.name} — ${week?.period_label || ''} ═══`,
+      '',
+      narrative.headline,
+      '',
+      narrative.execSummary,
+      '',
+      kpiBullets,
+      '',
+      narrative.priceAnalysis,
+      '',
+      narrative.volumeAnalysis,
+      '',
+      narrative.dynamicsAnalysis,
+      '',
+      '30-Day Outlook: ' + narrative.outlook,
+    ].join('\n');
+  }).join('\n\n');
+
+  navigator.clipboard.writeText(full).then(() => {
+    const btn = event.target;
+    const orig = btn.textContent;
+    btn.textContent = 'All Copied ✓';
+    setTimeout(() => btn.textContent = orig, 2500);
+  });
+}
+
+renderNewsletter();
+</script>
+</body>
+</html>

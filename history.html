@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Market Intel — History</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.history-search { display: flex; gap: 10px; margin-bottom: 20px; }
+.history-search input {
+  flex: 1;
+  background: var(--card2);
+  border: 1px solid var(--border2);
+  border-radius: 6px;
+  padding: 8px 14px;
+  color: #fff;
+  font-size: 12px;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+}
+.history-search input:focus { border-color: var(--gold); }
+.history-week-card { background: var(--card); border: 1px solid var(--border); border-radius: 9px; overflow: hidden; margin-bottom: 12px; }
+.history-week-header { padding: 14px 18px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; border-bottom: 1px solid transparent; transition: background .15s; }
+.history-week-header:hover { background: rgba(255,255,255,.02); }
+.history-week-header.open { border-bottom-color: var(--border); background: rgba(255,255,255,.02); }
+.history-week-period { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: #fff; }
+.history-week-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.history-week-body { padding: 16px 18px; display: none; }
+.history-week-body.open { display: block; }
+.history-seg-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.history-seg-row:last-child { border-bottom: none; }
+.history-seg-name { font-size: 12px; font-weight: 600; color: #bbb; }
+.history-seg-kpis { display: flex; gap: 14px; }
+.history-seg-kpi { font-size: 11px; color: var(--muted); }
+.history-seg-kpi strong { color: #ccc; font-weight: 600; }
+</style>
+</head>
+<body>
+<div id="sidebar"></div>
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">History</div>
+    <div class="topbar-right">
+      <span class="tb-date" id="tb-date"></span>
+      <span class="system-badge">Market Intel</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header">
+      <div class="sec-label">Prior Periods · All Segments</div>
+      <h2>Data Archive</h2>
+      <div class="gold-bar"></div>
+      <p>Every period saved via Data Input is archived here. Search to find a specific period. Prevents repeating points covered in prior newsletters.</p>
+    </div>
+
+    <div class="history-search">
+      <input type="text" id="search-input" placeholder="Search by period, segment, or metric…" oninput="filterHistory()">
+      <button class="btn" onclick="document.getElementById('search-input').value=''; filterHistory()">Clear</button>
+    </div>
+
+    <div id="history-list"></div>
+  </div>
+  <footer class="page-footer">
+    <span>All data stored in browser localStorage · Export via Data Input page</span>
+    <span>Add each Sunday's data to build the archive over time</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+buildMISidebar('history');
+setDate(document.getElementById('tb-date'));
+
+let allWeeks = getAllWeeks();
+let filteredWeeks = allWeeks;
+
+function filterHistory() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  filteredWeeks = q ? allWeeks.filter(w =>
+    w.period_label.toLowerCase().includes(q) ||
+    w.week.toLowerCase().includes(q) ||
+    (w.source && w.source.toLowerCase().includes(q))
+  ) : allWeeks;
+  renderHistory();
+}
+
+function toggleWeek(weekKey) {
+  const body = document.getElementById(`hbody-${weekKey.replace(/\W/g,'')}`);
+  const header = document.getElementById(`hhead-${weekKey.replace(/\W/g,'')}`);
+  if (body) {
+    const open = body.classList.toggle('open');
+    header.classList.toggle('open', open);
+  }
+}
+
+function renderHistory() {
+  const el = document.getElementById('history-list');
+  if (filteredWeeks.length === 0) {
+    el.innerHTML = `<div class="empty-state">
+      <div class="empty-state-icon">◷</div>
+      <div class="empty-state-title">No matching periods</div>
+      <div class="empty-state-sub">Add market data via <a href="input.html" style="color:var(--gold)">Data Input</a> each week.</div>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = filteredWeeks.map(week => {
+    const safeKey = week.week.replace(/\W/g,'');
+    const segsWithData = Object.values(week.segments || {}).filter(Boolean);
+    return `<div class="history-week-card">
+      <div class="history-week-header" id="hhead-${safeKey}" onclick="toggleWeek('${week.week}')">
+        <div>
+          <div class="history-week-period">${week.period_label}</div>
+          <div class="history-week-meta">${week.week} · ${segsWithData.length} segment${segsWithData.length !== 1 ? 's' : ''} · ${week.source || 'TRREB MLS'}</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          ${segsWithData.length > 0 ? `<span class="badge badge-green">${segsWithData.length} seg</span>` : ''}
+          <a href="segment.html" class="btn btn-sm" onclick="event.stopPropagation()">View Detail</a>
+          <span style="font-size:14px;color:var(--muted)">▾</span>
+        </div>
+      </div>
+      <div class="history-week-body" id="hbody-${safeKey}">
+        ${segsWithData.length === 0 ? `<div style="font-size:12px;color:var(--muted);padding:8px 0">No segment data recorded for this period.</div>` :
+          segsWithData.map(seg => {
+            const s = seg.selected;
+            const p = seg.prior;
+            const momPrice = computeDelta(s.avg_price, p?.avg_price);
+            const momVol   = computeDelta(s.transactions, p?.transactions);
+            return `<div class="history-seg-row">
+              <div>
+                <div class="history-seg-name">${seg.segment_name}</div>
+                <div style="font-size:10px;color:var(--muted2)">Period: ${week.period_label}</div>
+              </div>
+              <div class="history-seg-kpis">
+                <div class="history-seg-kpi">Avg Price: <strong>${fmtCurrency(s.avg_price, true)}</strong>${momPrice != null ? ` <span class="delta-chip ${momPrice >= 0 ? 'delta-up' : 'delta-down'}" style="font-size:8px">${deltaArrow(momPrice)} ${fmtDelta(momPrice)}</span>` : ''}</div>
+                <div class="history-seg-kpi">Sales: <strong>${fmtNum(s.transactions)}</strong>${momVol != null ? ` (${momVol >= 0 ? '+' : ''}${momVol.toFixed(0)}% MoM)` : ''}</div>
+                <div class="history-seg-kpi">SP/LP: <strong>${fmtPct(s.avg_splp)}</strong></div>
+                <div class="history-seg-kpi">Terminated: <strong style="color:var(--orange)">${fmtNum(s.terminations)}</strong></div>
+              </div>
+            </div>`;
+          }).join('')
+        }
+      </div>
+    </div>`;
+  }).join('');
+
+  // Auto-open first week
+  if (filteredWeeks.length > 0) {
+    toggleWeek(filteredWeeks[0].week);
+  }
+}
+
+renderHistory();
+</script>
+</body>
+</html>

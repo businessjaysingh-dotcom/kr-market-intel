@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Market Intel — Trends</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.trend-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 24px; }
+.trend-controls select { background: var(--card2); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; font-family: 'Inter',sans-serif; outline: none; cursor: pointer; }
+.trend-controls select:focus { border-color: var(--gold); }
+.trend-stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+.trend-stat { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+.trend-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+.trend-stat-val { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; color: #fff; }
+.trend-stat-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+</style>
+</head>
+<body>
+<div id="sidebar"></div>
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Trends</div>
+    <div class="topbar-right">
+      <span class="tb-date" id="tb-date"></span>
+      <span class="system-badge">Market Intel</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header">
+      <div class="sec-label">12-Week & 12-Month Arc · All Segments</div>
+      <h2>Market Trends</h2>
+      <div class="gold-bar"></div>
+      <p>Spot longer-arc patterns across segments — rising DOM, compression in SP/LP, supply building. The signals that don't show up in a single week's data.</p>
+    </div>
+
+    <div class="trend-controls">
+      <label style="font-size:11px;color:var(--muted)">Segment:</label>
+      <select id="trend-seg">
+        <option value="oakville-detached">Oakville Detached</option>
+        <option value="forest-hill-detached" disabled>Forest Hill (no data)</option>
+        <option value="bridle-path-luxury" disabled>Bridle Path (no data)</option>
+        <option value="yorkville-condos" disabled>Yorkville (no data)</option>
+        <option value="lorne-park-detached" disabled>Lorne Park (no data)</option>
+      </select>
+      <label style="font-size:11px;color:var(--muted)">Metric:</label>
+      <select id="trend-metric">
+        <option value="avg_price">Average Price</option>
+        <option value="transactions">Transaction Volume</option>
+        <option value="avg_splp">SP/LP Ratio</option>
+        <option value="avg_dom">Days on Market</option>
+        <option value="terminations">Terminations</option>
+        <option value="new_listings">New Listings</option>
+      </select>
+    </div>
+
+    <!-- Stat row from trend data -->
+    <div class="trend-stat-row" id="trend-stats"></div>
+
+    <!-- Primary trend chart -->
+    <div class="chart-card" style="margin-bottom:18px">
+      <div class="chart-card-title" id="trend-chart-title">12-Month Trend</div>
+      <div class="chart-card-sub">Oakville Detached · monthly · TRREB Stratus</div>
+      <div class="chart-wrap" style="height:260px"><canvas id="chart-main-trend"></canvas></div>
+    </div>
+
+    <!-- Secondary charts: 3 fixed KPIs side by side -->
+    <div class="chart-grid-2" style="margin-bottom:18px">
+      <div class="chart-card">
+        <div class="chart-card-title">SP/LP Trend</div>
+        <div class="chart-card-sub">% of list price achieved at sale</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-splp"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Terminations — Call List Growth</div>
+        <div class="chart-card-sub">Failed listings per month</div>
+        <div class="chart-wrap" style="height:200px"><canvas id="chart-term-trend"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="sec-label" style="margin-bottom:8px">Key Trend Signals · ${new Date().toLocaleDateString('en-CA', {month:'long',year:'numeric'})}</div>
+      <div id="trend-signals"></div>
+    </div>
+  </div>
+  <footer class="page-footer">
+    <span>Trend data: 12-month historical arc · Oakville Detached · TRREB MLS</span>
+    <span>Other segments will populate as weekly data is added via Data Input</span>
+  </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script src="shared.js"></script>
+<script>
+buildMISidebar('trends');
+setDate(document.getElementById('tb-date'));
+
+let mainChart = null;
+
+function buildTrendStats(trend) {
+  const first = trend[0];
+  const last  = trend[trend.length - 1];
+  const peak  = trend.reduce((a,b) => b.avg_price > a.avg_price ? b : a, trend[0]);
+  const momVol = computeDelta(last.transactions, trend[trend.length-2]?.transactions);
+  document.getElementById('trend-stats').innerHTML = `
+    <div class="trend-stat">
+      <div class="trend-stat-label">12-Month Price Change</div>
+      <div class="trend-stat-val" style="color:${last.avg_price >= first.avg_price ? 'var(--green)' : 'var(--red)'}">
+        ${computeDelta(last.avg_price, first.avg_price) >= 0 ? '+' : ''}${computeDelta(last.avg_price, first.avg_price)?.toFixed(1)}%
+      </div>
+      <div class="trend-stat-sub">${fmtCurrency(first.avg_price, true)} → ${fmtCurrency(last.avg_price, true)}</div>
+    </div>
+    <div class="trend-stat">
+      <div class="trend-stat-label">Peak Average Price</div>
+      <div class="trend-stat-val">${fmtCurrency(peak.avg_price, true)}</div>
+      <div class="trend-stat-sub">${peak.period} · ${computeDelta(last.avg_price, peak.avg_price)?.toFixed(1)}% off peak</div>
+    </div>
+    <div class="trend-stat">
+      <div class="trend-stat-label">SP/LP Range (12mo)</div>
+      <div class="trend-stat-val">${Math.min(...trend.map(t=>t.avg_splp)).toFixed(1)}–${Math.max(...trend.map(t=>t.avg_splp)).toFixed(1)}%</div>
+      <div class="trend-stat-sub">Current: ${last.avg_splp.toFixed(1)}%</div>
+    </div>
+    <div class="trend-stat">
+      <div class="trend-stat-label">Avg Terminations / Month</div>
+      <div class="trend-stat-val" style="color:var(--orange)">${Math.round(trend.reduce((s,t)=>s+t.terminations,0)/trend.length)}</div>
+      <div class="trend-stat-sub">Last month: ${last.terminations} (${momVol != null ? (momVol >= 0 ? '+' : '') + momVol.toFixed(0) + '% MoM' : '—'})</div>
+    </div>`;
+}
+
+function buildSignals(trend) {
+  const last3 = trend.slice(-3);
+  const signals = [];
+  // DOM rising?
+  if (last3.every((t,i) => i === 0 || t.avg_dom >= last3[i-1].avg_dom)) {
+    signals.push({ icon: '↗', color: 'var(--red)', text: `Average DOM has risen for ${last3.length} consecutive months — now at ${last3[last3.length-1].avg_dom} days. Buyers are taking longer to commit.` });
+  }
+  // Terminations rising?
+  if (last3[last3.length-1].terminations > last3[0].terminations) {
+    const delta = computeDelta(last3[last3.length-1].terminations, last3[0].terminations);
+    signals.push({ icon: '⚠', color: 'var(--orange)', text: `Terminations up ${delta?.toFixed(0)}% over the last 3 months. ${last3[last3.length-1].terminations} failed listings last month = Karolis's active call list.` });
+  }
+  // Volume recovering?
+  const volDelta = computeDelta(last3[last3.length-1].transactions, last3[0].transactions);
+  if (volDelta > 20) {
+    signals.push({ icon: '▲', color: 'var(--green)', text: `Transaction volume up ${volDelta?.toFixed(0)}% over 3 months — spring activity accelerating. Check if SP/LP follows.` });
+  }
+  // SP/LP below 97?
+  if (trend[trend.length-1].avg_splp < 97) {
+    signals.push({ icon: '◉', color: 'var(--gold)', text: `SP/LP at ${trend[trend.length-1].avg_splp.toFixed(1)}% — sellers consistently netting below ask. The negotiating window for buyers remains open.` });
+  }
+  if (signals.length === 0) {
+    signals.push({ icon: '—', color: 'var(--muted)', text: 'No notable trend signals this period. Add more weeks of data to surface pattern alerts.' });
+  }
+  document.getElementById('trend-signals').innerHTML = signals.map(s =>
+    `<div style="display:flex;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="color:${s.color};font-size:16px;flex-shrink:0">${s.icon}</span>
+      <span style="font-size:13px;color:#ccc;line-height:1.6">${s.text}</span>
+    </div>`
+  ).join('');
+}
+
+function renderMainChart() {
+  const metric = document.getElementById('trend-metric').value;
+  const seg    = document.getElementById('trend-seg').value;
+  const trend  = seg === 'oakville-detached' ? MI_TREND_OAKVILLE : null;
+
+  if (!trend) {
+    document.getElementById('chart-main-trend').parentElement.parentElement.innerHTML = `
+      <div class="empty-state"><div class="empty-state-title">No trend data for this segment</div><div class="empty-state-sub">Add weekly data via <a href="input.html" style="color:var(--gold)">Data Input</a></div></div>`;
+    return;
+  }
+
+  const kpiDef = MI_KPIS.find(k => k.key === metric);
+  document.getElementById('trend-chart-title').textContent = `12-Month Trend — ${kpiDef?.label || metric}`;
+
+  if (mainChart) mainChart.destroy();
+  mainChart = new Chart(document.getElementById('chart-main-trend'), {
+    type: 'line',
+    data: {
+      labels: trend.map(t => t.period),
+      datasets: [{
+        data: trend.map(t => t[metric]),
+        borderColor: '#C9A84C',
+        backgroundColor: 'rgba(201,168,76,.08)',
+        fill: true, tension: 0.4, borderWidth: 2,
+        pointBackgroundColor: '#C9A84C', pointRadius: 4,
+      }]
+    },
+    options: buildChartOptions({
+      scales: {
+        y: { ticks: { callback: v => {
+          if (metric === 'avg_price') return '$' + (v/1e6).toFixed(2) + 'M';
+          if (metric === 'avg_splp') return v + '%';
+          if (metric === 'avg_dom') return v + 'd';
+          return v;
+        }}}
+      }
+    })
+  });
+}
+
+function renderSecondaryCharts(trend) {
+  // SP/LP
+  new Chart(document.getElementById('chart-splp'), {
+    type: 'line',
+    data: {
+      labels: trend.map(t => t.period),
+      datasets: [{
+        data: trend.map(t => t.avg_splp),
+        borderColor: '#C9A84C', backgroundColor: 'rgba(201,168,76,.06)',
+        fill: true, tension: 0.3, borderWidth: 2,
+        pointBackgroundColor: '#C9A84C', pointRadius: 3,
+      }, {
+        data: Array(trend.length).fill(97),
+        borderColor: 'rgba(255,255,255,.1)', borderDash: [4,4], borderWidth: 1,
+        pointRadius: 0, label: 'Parity (97%)',
+      }]
+    },
+    options: buildChartOptions({ scales: { y: { min: 94, ticks: { callback: v => v + '%' } } } })
+  });
+
+  // Terminations
+  new Chart(document.getElementById('chart-term-trend'), {
+    type: 'bar',
+    data: {
+      labels: trend.map(t => t.period),
+      datasets: [{
+        data: trend.map(t => t.terminations),
+        backgroundColor: 'rgba(249,115,22,.45)',
+        borderColor: '#f97316', borderWidth: 1, borderRadius: 3,
+      }]
+    },
+    options: buildChartOptions({})
+  });
+}
+
+// Init
+const trend = MI_TREND_OAKVILLE;
+buildTrendStats(trend);
+buildSignals(trend);
+renderMainChart();
+renderSecondaryCharts(trend);
+
+document.getElementById('trend-seg').addEventListener('change', renderMainChart);
+document.getElementById('trend-metric').addEventListener('change', renderMainChart);
+</script>
+</body>
+</html>

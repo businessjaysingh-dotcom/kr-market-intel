@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Market Intel — This Week</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.week-header {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  padding: 14px 20px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.week-header-left h3 {
+  font-family: 'Playfair Display', serif;
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+.week-header-left p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+}
+.summary-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+}
+.summary-card-label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+.summary-card-val {
+  font-family: 'Playfair Display', serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
+}
+.summary-card-sub { font-size: 11px; color: var(--muted); margin-top: 4px; }
+.no-data-banner {
+  background: rgba(249,115,22,.06);
+  border: 1px solid rgba(249,115,22,.2);
+  border-radius: 8px;
+  padding: 14px 20px;
+  font-size: 13px;
+  color: #fb923c;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.alert-count {
+  font-family: 'Playfair Display', serif;
+  font-size: 36px;
+  font-weight: 900;
+  color: var(--orange);
+  margin-right: 4px;
+}
+</style>
+</head>
+<body>
+<div id="sidebar"></div>
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">This Week</div>
+    <div class="topbar-right">
+      <span class="tb-date" id="tb-date"></span>
+      <span class="week-badge" id="week-label">Loading…</span>
+      <span class="system-badge">Market Intel</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header">
+      <div class="sec-label">§4.8 Market Intelligence · Weekly Review</div>
+      <h2>Five Segment Overview</h2>
+      <div class="gold-bar"></div>
+      <p>One view across all five farm pockets. Click any segment to drill into the full KPI strip, charts, and AI-written analysis. Data sourced from TRREB Stratus — attribution required on all use.</p>
+    </div>
+
+    <div id="week-header-area"></div>
+    <div id="summary-strip-area"></div>
+    <div id="alert-area"></div>
+
+    <div id="segment-grid-area"></div>
+
+    <div class="card mt-16">
+      <div class="sec-label" style="margin-bottom:6px">Workflow Reminder · §13 SOP</div>
+      <p style="font-size:12px;color:var(--muted);line-height:1.6">
+        <strong style="color:#bbb">Sunday workflow:</strong> Pull TRREB Stratus export for each segment →
+        paste into <a href="input.html" style="color:var(--gold)">Data Input</a> →
+        all pages update automatically → review AI analysis →
+        copy paragraphs into newsletter → done in 15 minutes.
+      </p>
+    </div>
+  </div>
+  <footer class="page-footer">
+    <span>Source: TRREB MLS · Stratus data — for internal use only · Not for distribution</span>
+    <span>CASL s.6(5) compliant · No homeowner data · §3 hard constraints apply</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+buildMISidebar('index');
+setDate(document.getElementById('tb-date'));
+
+const week = getLatestWeek();
+
+// Week header
+if (week) {
+  document.getElementById('week-label').textContent = week.period_label;
+  const segmentsWithData = Object.values(week.segments).filter(Boolean).length;
+  document.getElementById('week-header-area').innerHTML = `
+    <div class="week-header">
+      <div class="week-header-left">
+        <h3>${week.period_label}</h3>
+        <p>${week.source || 'TRREB MLS'} · ${segmentsWithData} of 5 segments have data</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center">
+        ${segmentsWithData < 5 ? `<span class="badge badge-orange">${5 - segmentsWithData} segments missing data</span>` : '<span class="badge badge-green">All segments active</span>'}
+        <a href="input.html" class="btn btn-sm">+ Add Data</a>
+      </div>
+    </div>`;
+
+  // Summary strip — aggregate across segments with data
+  const oakData = getSegmentData(week, 'oakville-detached');
+  if (oakData) {
+    const s = oakData.selected;
+    const p = oakData.prior;
+    const momVol = computeDelta(s.transactions, p?.transactions);
+    const momTerm = computeDelta(s.terminations, p?.terminations);
+    document.getElementById('summary-strip-area').innerHTML = `
+      <div class="summary-strip">
+        <div class="summary-card">
+          <div class="summary-card-label">Oakville Avg Price</div>
+          <div class="summary-card-val">${fmtCurrency(s.avg_price, true)}</div>
+          <div class="summary-card-sub">${momVol != null ? (momVol >= 0 ? '▲' : '▼') + Math.abs(momVol).toFixed(1) + '% sales MoM' : '—'}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Sales Volume</div>
+          <div class="summary-card-val">${fmtNum(s.transactions)}</div>
+          <div class="summary-card-sub">${momVol != null ? (momVol >= 0 ? '+' : '') + momVol.toFixed(1) + '% MoM' : '—'}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Terminations</div>
+          <div class="summary-card-val" style="color:var(--orange)">${fmtNum(s.terminations)}</div>
+          <div class="summary-card-sub">${momTerm != null ? (momTerm >= 0 ? '+' : '') + momTerm.toFixed(1) + '% MoM · Call list' : '—'}</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Avg SP/LP</div>
+          <div class="summary-card-val">${fmtPct(s.avg_splp)}</div>
+          <div class="summary-card-sub">${fmtPct(s.pct_below_list)} sold below ask</div>
+        </div>
+      </div>`;
+
+    if (s.terminations > 100) {
+      document.getElementById('alert-area').innerHTML = `
+        <div class="alert-box" style="margin-bottom:20px">
+          <strong><span class="alert-count">${s.terminations}</span> terminated listings</strong> in Oakville this period — up ${momTerm != null ? Math.abs(momTerm).toFixed(0) + '%' : 'sharply'} MoM.
+          These sellers listed, waited, and pulled. Each one is a conversation. <a href="segment.html?id=oakville-detached" style="color:var(--gold2)">See full analysis →</a>
+        </div>`;
+    }
+  }
+} else {
+  document.getElementById('week-label').textContent = 'No data';
+  document.getElementById('week-header-area').innerHTML = `
+    <div class="no-data-banner">
+      ⚠ No market data loaded yet. <a href="input.html" style="color:var(--gold);margin-left:6px">Add your first week's data →</a>
+    </div>`;
+}
+
+// Segment tiles
+const tilesEl = document.getElementById('segment-grid-area');
+tilesEl.innerHTML = `<div class="segment-grid">${MI_SEGMENTS.map(seg => {
+  const segData = week ? getSegmentData(week, seg.id) : null;
+  if (!segData) {
+    return `<div class="segment-tile no-data">
+      <div class="tile-city">${seg.city} · ${seg.type}</div>
+      <div class="tile-name">${seg.name}</div>
+      <div class="tile-no-data">No data this period</div>
+      <div style="font-size:10px;color:var(--muted2);margin-top:8px">${seg.postalCodes}</div>
+      <div style="margin-top:12px"><a href="input.html" class="btn btn-sm">Add Data</a></div>
+    </div>`;
+  }
+  const sel  = segData.selected;
+  const prior = segData.prior;
+  const momPrice = computeDelta(sel.avg_price, prior?.avg_price);
+  const momVol   = computeDelta(sel.transactions, prior?.transactions);
+  const yoyPrice = computeDelta(sel.avg_price, segData.same_period_last_year?.avg_price);
+  const insight  = generateTileInsight(segData);
+  return `<a class="segment-tile" href="segment.html?id=${seg.id}">
+    <div class="tile-city">${seg.city} · ${seg.type}</div>
+    <div class="tile-name">${seg.name}</div>
+    <div class="tile-kpi-val">${fmtCurrency(sel.avg_price, true)}</div>
+    <div class="tile-kpi-label">Avg Sale Price</div>
+    <div class="tile-deltas">
+      ${deltaChip(momPrice, true, 'MoM')}
+      ${deltaChip(yoyPrice, true, 'YoY')}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+      <span style="font-size:10px;color:var(--muted)">${fmtNum(sel.transactions)} sales</span>
+      <span style="font-size:10px;color:var(--muted)">·</span>
+      <span style="font-size:10px;color:${sel.terminations>100?'var(--orange)':'var(--muted)'}">${fmtNum(sel.terminations)} terminated</span>
+      <span style="font-size:10px;color:var(--muted)">·</span>
+      <span style="font-size:10px;color:var(--muted)">${fmtPct(sel.avg_splp)} SP/LP</span>
+    </div>
+    <div class="tile-takeaway">${insight}</div>
+  </a>`;
+}).join('')}</div>`;
+</script>
+</body>
+</html>

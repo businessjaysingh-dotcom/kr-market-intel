@@ -1,0 +1,343 @@
+{
+  "week": "2026-W11",
+  "period_label": "March 2026",
+  "period_type": "monthly",
+  "period_end": "2026-03-31",
+  "generated_at": "2026-05-09",
+  "source": "TRREB MLS \u00b7 Halton Region \u00b7 Detached Homes",
+  "segments": {
+    "oakville-detached": {
+      "segment_id": "oakville-detached",
+      "segment_name": "Oakville Detached",
+      "sample_size_flag": false,
+      "selected": {
+        "avg_price": 1850183,
+        "median_price": 1627500,
+        "avg_list_price": 1921271,
+        "median_list_price": 1676107,
+        "transactions": 102,
+        "new_listings": 341,
+        "terminations": 124,
+        "avg_splp": 96.3,
+        "median_splp": 97.1,
+        "avg_dom": 30,
+        "median_dom": 18,
+        "pct_above_list": 4.9,
+        "pct_at_list": 7.8,
+        "pct_below_list": 87.3,
+        "total_dollar_volume": 188718666
+      },
+      "prior": {
+        "avg_price": 1834531,
+        "median_price": 1530000,
+        "avg_list_price": 1924378,
+        "median_list_price": 1638000,
+        "transactions": 71,
+        "new_listings": 274,
+        "terminations": 91,
+        "avg_splp": 95.3,
+        "median_splp": 96.2,
+        "avg_dom": 29,
+        "median_dom": 17,
+        "pct_above_list": 3.9,
+        "pct_at_list": 7.0,
+        "pct_below_list": 89.1,
+        "total_dollar_volume": 130251701
+      },
+      "same_period_last_year": {
+        "avg_price": 1917422,
+        "median_price": 1765000,
+        "avg_list_price": 1972459,
+        "median_list_price": 1815000,
+        "transactions": 98,
+        "new_listings": 374,
+        "terminations": 147,
+        "avg_splp": 97.2,
+        "median_splp": 98.1,
+        "avg_dom": 25,
+        "median_dom": 14,
+        "pct_above_list": 7.1,
+        "pct_at_list": 10.2,
+        "pct_below_list": 82.7,
+        "total_dollar_volume": 187907356
+      },
+      "deltas": {
+        "avg_price": {
+          "value": 1850183,
+          "mom": 0.85,
+          "yoy": -3.51,
+          "mom_class": "stable",
+          "yoy_class": "stable"
+        },
+        "median_price": {
+          "value": 1627500,
+          "mom": 6.37,
+          "yoy": -7.79,
+          "mom_class": "noteworthy_positive",
+          "yoy_class": "noteworthy_negative"
+        },
+        "avg_list_price": {
+          "value": 1921271,
+          "mom": -0.16,
+          "yoy": -2.6,
+          "mom_class": "stable",
+          "yoy_class": "stable"
+        },
+        "median_list_price": {
+          "value": 1676107,
+          "mom": 2.33,
+          "yoy": -7.65,
+          "mom_class": "stable",
+          "yoy_class": "noteworthy_neutral"
+        },
+        "transactions": {
+          "value": 102,
+          "mom": 43.66,
+          "yoy": 4.08,
+          "mom_class": "noteworthy_positive",
+          "yoy_class": "stable"
+        },
+        "new_listings": {
+          "value": 341,
+          "mom": 24.45,
+          "yoy": -8.82,
+          "mom_class": "noteworthy_neutral",
+          "yoy_class": "noteworthy_neutral"
+        },
+        "terminations": {
+          "value": 124,
+          "mom": 36.26,
+          "yoy": -15.65,
+          "mom_class": "noteworthy_negative",
+          "yoy_class": "noteworthy_positive"
+        },
+        "avg_splp": {
+          "value": 96.3,
+          "mom": 1.05,
+          "yoy": -0.93,
+          "mom_class": "stable",
+          "yoy_class": "stable"
+        },
+        "median_splp": {
+          "value": 97.1,
+          "mom": 0.94,
+          "yoy": -1.02,
+          "mom_class": "stable",
+          "yoy_class": "stable"
+        },
+        "avg_dom": {
+          "value": 30,
+          "mom": 3.45,
+          "yoy": 20.0,
+          "mom_class": "stable",
+          "yoy_class": "noteworthy_negative"
+        },
+        "median_dom": {
+          "value": 18,
+          "mom": 5.88,
+          "yoy": 28.57,
+          "mom_class": "noteworthy_negative",
+          "yoy_class": "noteworthy_negative"
+        },
+        "pct_above_list": {
+          "value": 4.9,
+          "mom": 25.64,
+          "yoy": -30.99,
+          "mom_class": "noteworthy_positive",
+          "yoy_class": "noteworthy_negative"
+        },
+        "pct_at_list": {
+          "value": 7.8,
+          "mom": 11.43,
+          "yoy": -23.53,
+          "mom_class": "noteworthy_neutral",
+          "yoy_class": "noteworthy_neutral"
+        },
+        "pct_below_list": {
+          "value": 87.3,
+          "mom": -2.02,
+          "yoy": 5.56,
+          "mom_class": "stable",
+          "yoy_class": "noteworthy_negative"
+        },
+        "total_dollar_volume": {
+          "value": 188718666,
+          "mom": 44.89,
+          "yoy": 0.43,
+          "mom_class": "noteworthy_positive",
+          "yoy_class": "stable"
+        }
+      },
+      "insights": [
+        {
+          "kpi": "terminations",
+          "label": "Terminations",
+          "type": "mom",
+          "direction": "up",
+          "delta": 36.3,
+          "tone": "negative",
+          "text": "Terminations up 36.3% period-over-period"
+        },
+        {
+          "kpi": "pct_above_list",
+          "label": "% Above List",
+          "type": "yoy",
+          "direction": "down",
+          "delta": -31.0,
+          "tone": "negative",
+          "text": "% Above List down 31.0% year-over-year"
+        },
+        {
+          "kpi": "median_dom",
+          "label": "Median DOM",
+          "type": "yoy",
+          "direction": "up",
+          "delta": 28.6,
+          "tone": "negative",
+          "text": "Median DOM up 28.6% year-over-year"
+        },
+        {
+          "kpi": "new_listings",
+          "label": "New Listings",
+          "type": "mom",
+          "direction": "up",
+          "delta": 24.5,
+          "tone": "negative",
+          "text": "New Listings up 24.5% period-over-period"
+        },
+        {
+          "kpi": "pct_at_list",
+          "label": "% At List",
+          "type": "yoy",
+          "direction": "down",
+          "delta": -23.5,
+          "tone": "negative",
+          "text": "% At List down 23.5% year-over-year"
+        },
+        {
+          "kpi": "avg_dom",
+          "label": "Avg DOM",
+          "type": "yoy",
+          "direction": "up",
+          "delta": 20.0,
+          "tone": "negative",
+          "text": "Avg DOM up 20.0% year-over-year"
+        },
+        {
+          "kpi": "pct_at_list",
+          "label": "% At List",
+          "type": "mom",
+          "direction": "up",
+          "delta": 11.4,
+          "tone": "negative",
+          "text": "% At List up 11.4% period-over-period"
+        },
+        {
+          "kpi": "new_listings",
+          "label": "New Listings",
+          "type": "yoy",
+          "direction": "down",
+          "delta": -8.8,
+          "tone": "negative",
+          "text": "New Listings down 8.8% year-over-year"
+        },
+        {
+          "kpi": "median_price",
+          "label": "Median Price",
+          "type": "yoy",
+          "direction": "down",
+          "delta": -7.8,
+          "tone": "negative",
+          "text": "Median Price down 7.8% year-over-year"
+        },
+        {
+          "kpi": "median_list_price",
+          "label": "Median List Price",
+          "type": "yoy",
+          "direction": "down",
+          "delta": -7.7,
+          "tone": "negative",
+          "text": "Median List Price down 7.7% year-over-year"
+        },
+        {
+          "kpi": "median_dom",
+          "label": "Median DOM",
+          "type": "mom",
+          "direction": "up",
+          "delta": 5.9,
+          "tone": "negative",
+          "text": "Median DOM up 5.9% period-over-period"
+        },
+        {
+          "kpi": "pct_below_list",
+          "label": "% Below List",
+          "type": "yoy",
+          "direction": "up",
+          "delta": 5.6,
+          "tone": "negative",
+          "text": "% Below List up 5.6% year-over-year"
+        },
+        {
+          "kpi": "total_dollar_volume",
+          "label": "Dollar Volume",
+          "type": "mom",
+          "direction": "up",
+          "delta": 44.9,
+          "tone": "positive",
+          "text": "Dollar Volume up 44.9% period-over-period"
+        },
+        {
+          "kpi": "transactions",
+          "label": "Sales Volume",
+          "type": "mom",
+          "direction": "up",
+          "delta": 43.7,
+          "tone": "positive",
+          "text": "Sales Volume up 43.7% period-over-period"
+        },
+        {
+          "kpi": "pct_above_list",
+          "label": "% Above List",
+          "type": "mom",
+          "direction": "up",
+          "delta": 25.6,
+          "tone": "positive",
+          "text": "% Above List up 25.6% period-over-period"
+        },
+        {
+          "kpi": "terminations",
+          "label": "Terminations",
+          "type": "yoy",
+          "direction": "down",
+          "delta": -15.6,
+          "tone": "positive",
+          "text": "Terminations down 15.6% year-over-year"
+        },
+        {
+          "kpi": "median_price",
+          "label": "Median Price",
+          "type": "mom",
+          "direction": "up",
+          "delta": 6.4,
+          "tone": "positive",
+          "text": "Median Price up 6.4% period-over-period"
+        }
+      ],
+      "verdict": "buyer",
+      "narrative": {
+        "mode": "template",
+        "headline": "BUYER'S MARKET \u2014 124 terminations and counting. These sellers need a new plan.",
+        "exec_summary": "Oakville Detached posted 102 sales, up 43.7% from 71 the prior period. 87.3% of homes sold below asking \u2014 an average discount of $71,088 per transaction. Year-over-year, the average price is down 3.5% \u2014 the trend that matters most for Karolis's pitch to sellers who bought at peak.",
+        "price_analysis": "Average price edged up 0.8% at $1,850,183. The year-over-year picture is 3.5% softer than the same period last year ($1,917,422). The $222,683 gap between average and median signals that trophy-tier transactions are pulling the average up \u2014 the mid-market is trading closer to $1,627,500. Median is up 6.4% period-over-period and 7.8% below last year's comparable.",
+        "volume_analysis": "102 closed sales \u2014 up 43.7% from the prior period. With 341 new listings against 102 sales, the absorption rate sits at 30% \u2014 balanced conditions. Average days on market is 3% longer than last period at 30 days \u2014 20% above the same period last year.",
+        "dynamics_analysis": "124 terminations this period \u2014 up 36.3% from the prior period. That acceleration in failed listings is the signal: sellers are testing price points that buyers won't meet. The 96.3% average SP/LP means the typical seller is netting $71,088 below their ask. At 87.3% of sales coming in below asking, buyers are disciplined and extracting concessions. Sellers who aren't priced precisely are sitting \u2014 and eventually coming off.",
+        "outlook": "Spring momentum typically peaks in April\u2013May. The volume surge this period is consistent with seasonal patterns \u2014 expect continued activity, but watch whether sellers reprice to meet the market or dig in on ask. If the termination count climbs above 143 next period, it signals a meaningful increase in seller frustration \u2014 Karolis's call list grows accordingly. Days on market trending 20% above last year's pace is the watchlist metric: if it continues to climb into summer, this market hasn't bottomed yet. No price predictions \u2014 but the data supports targeted outreach to terminated listings and overpriced actives sitting past 45 DOM.",
+        "compliance_note": "\u00a714: AI draft only. Karolis reviews and edits all copy before use. No price predictions included."
+      }
+    },
+    "forest-hill-detached": null,
+    "bridle-path-luxury": null,
+    "yorkville-condos": null,
+    "lorne-park-detached": null
+  }
+}

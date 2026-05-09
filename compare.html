@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Market Intel — Compare</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;0,900&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="shared.css">
+<style>
+.compare-picker { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 24px; }
+.compare-picker label { font-size: 11px; color: var(--muted); }
+.compare-picker select { background: var(--card2); border: 1px solid var(--border2); border-radius: 6px; padding: 6px 10px; color: #fff; font-size: 12px; font-family: 'Inter',sans-serif; outline: none; cursor: pointer; }
+.compare-picker select:focus { border-color: var(--gold); }
+.best-cell { background: rgba(201,168,76,.06); }
+</style>
+</head>
+<body>
+<div id="sidebar"></div>
+<div class="main">
+  <div class="topbar">
+    <div class="page-title">Compare</div>
+    <div class="topbar-right">
+      <span class="tb-date" id="tb-date"></span>
+      <span class="week-badge" id="week-label">—</span>
+      <span class="system-badge">Market Intel</span>
+    </div>
+  </div>
+  <div class="content">
+    <div class="page-header">
+      <div class="sec-label">Side-by-side · Up to 4 segments</div>
+      <h2>Segment Comparison</h2>
+      <div class="gold-bar"></div>
+      <p>Compare any 2–4 segments on the same KPIs. Gold highlight marks the leading value per row.</p>
+    </div>
+
+    <div class="compare-picker">
+      <label>Compare:</label>
+      <select id="sel-a" onchange="renderCompare()"><option value="">— Select —</option></select>
+      <select id="sel-b" onchange="renderCompare()"><option value="">— Select —</option></select>
+      <select id="sel-c" onchange="renderCompare()"><option value="">— (optional) —</option></select>
+      <select id="sel-d" onchange="renderCompare()"><option value="">— (optional) —</option></select>
+    </div>
+
+    <div id="compare-area"></div>
+  </div>
+  <footer class="page-footer">
+    <span>Source: TRREB MLS · Stratus — internal use only</span>
+    <span>Gold cell = leading value for that metric</span>
+  </footer>
+</div>
+
+<script src="shared.js"></script>
+<script>
+buildMISidebar('compare');
+setDate(document.getElementById('tb-date'));
+
+const week = getLatestWeek();
+if (week) document.getElementById('week-label').textContent = week.period_label;
+
+// Populate selects with segments that have data
+MI_SEGMENTS.forEach(seg => {
+  const hasData = week && getSegmentData(week, seg.id) != null;
+  const opt = `<option value="${seg.id}" ${!hasData ? 'disabled' : ''}>${seg.name}${!hasData ? ' (no data)' : ''}</option>`;
+  ['sel-a','sel-b','sel-c','sel-d'].forEach(id => {
+    document.getElementById(id).insertAdjacentHTML('beforeend', opt);
+  });
+});
+
+// Default: select Oakville
+document.getElementById('sel-a').value = 'oakville-detached';
+renderCompare();
+
+function renderCompare() {
+  const ids = ['sel-a','sel-b','sel-c','sel-d'].map(id => document.getElementById(id).value).filter(Boolean);
+  const el = document.getElementById('compare-area');
+
+  if (ids.length < 1) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⊞</div><div class="empty-state-title">Select at least 2 segments</div></div>`;
+    return;
+  }
+
+  const columns = ids.map(id => {
+    const segMeta = MI_SEGMENTS.find(s => s.id === id);
+    const segData = week ? getSegmentData(week, id) : null;
+    return { id, segMeta, segData };
+  }).filter(c => c.segData);
+
+  if (columns.length < 1) {
+    el.innerHTML = `<div class="empty-state"><div class="empty-state-title">No data for selected segments</div><div class="empty-state-sub">Add data via <a href="input.html" style="color:var(--gold)">Data Input</a></div></div>`;
+    return;
+  }
+
+  // Render comparison table
+  el.innerHTML = `<div class="tbl-wrap"><table>
+    <thead><tr>
+      <th style="width:180px">Metric</th>
+      ${columns.map(c => `<th>
+        <div style="font-weight:700;color:#fff">${c.segMeta.name}</div>
+        <div style="font-size:9px;color:var(--muted);font-weight:400">${c.segMeta.city} · ${c.segMeta.type}</div>
+      </th>`).join('')}
+    </tr></thead>
+    <tbody>
+      ${MI_KPIS.map(kpi => {
+        const values = columns.map(c => c.segData.selected[kpi.key]);
+        const validVals = values.filter(v => v != null);
+        let bestVal = null;
+        if (validVals.length > 1 && kpi.higherIsBetter !== null) {
+          bestVal = kpi.higherIsBetter ? Math.max(...validVals) : Math.min(...validVals);
+        }
+        return `<tr>
+          <td class="td-main">${kpi.label}</td>
+          ${columns.map(c => {
+            const val = c.segData.selected[kpi.key];
+            const prior = c.segData.prior;
+            const mom = computeDelta(val, prior?.[kpi.key]);
+            const isBest = bestVal != null && val === bestVal;
+            return `<td ${isBest ? 'class="best-cell"' : ''}>
+              <div style="font-weight:600;color:${isBest ? 'var(--gold2)' : '#fff'}">${fmtVal(val, kpi.format)}</div>
+              ${mom != null ? `<div style="margin-top:3px">${deltaChip(mom, kpi.higherIsBetter, 'MoM')}</div>` : ''}
+            </td>`;
+          }).join('')}
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table></div>
+
+  <!-- Verdict row -->
+  <div class="card mt-16">
+    <div class="sec-label" style="margin-bottom:12px">Market Verdict per Segment</div>
+    <div style="display:grid;grid-template-columns:repeat(${columns.length},1fr);gap:14px">
+      ${columns.map(c => {
+        const sel = c.segData.selected;
+        const buyerMarket = sel.avg_splp < 97.5 && sel.pct_below_list > 75;
+        const n = generateNarrative(c.segData);
+        return `<div>
+          <div style="font-family:'Playfair Display',serif;font-size:14px;font-weight:700;color:#fff;margin-bottom:6px">${c.segMeta.name}</div>
+          <div class="verdict-pill ${buyerMarket ? 'verdict-buyer' : 'verdict-seller'}" style="display:inline-block;margin-bottom:8px">${buyerMarket ? "Buyer's Market" : "Seller's Market"}</div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.6">${n ? n.execSummary.slice(0, 180) + '…' : '—'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+}
+</script>
+<style>
+.verdict-pill { font-size:11px;font-weight:700;padding:4px 12px;border-radius:100px;letter-spacing:.5px;text-transform:uppercase; }
+.verdict-buyer { background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.3);color:#fb923c; }
+.verdict-seller { background:var(--green-dim);border:1px solid rgba(34,197,94,.3);color:#4ade80; }
+</style>
+</body>
+</html>
