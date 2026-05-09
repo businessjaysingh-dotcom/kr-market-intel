@@ -446,7 +446,7 @@ function buildMISidebar(activeId) {
         </a>`).join('')}
     </div>
     <div class="sidebar-back">
-      <a href="../system/index.html">← Back to KR System</a>
+      <a href="https://github.com/businessjaysingh-dotcom/kr-market-intel">← GitHub Repo</a>
     </div>`;
 }
 
